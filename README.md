@@ -1,4 +1,4 @@
-# BlueberryTUI
+# Blueberry
 **Blueberry!** is a TUI library meant to help make TUI applications.
 
 Current features:
