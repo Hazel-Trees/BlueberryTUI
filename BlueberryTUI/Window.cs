@@ -89,7 +89,7 @@ namespace BlueberryTUI
             Console.Write(BT.TopLeft + WindowTopLine + BT.TopRight);
 
             //Body of the Window
-            for (int i = 0 + (WindowHeight + WindowTop < 0 && KeepWindowOnScreen ? 0 - WindowHeight + WindowTop : 0); i < WindowHeight - 2 - (WindowHeight + WindowTop > Console.WindowHeight && KeepWindowOnScreen ? WindowHeight + WindowTop - Console.WindowHeight - 1 : 0); i++)
+            for (int i = 0; i < WindowHeight - 2; i++)
             {
                 Console.SetCursorPosition(Console.CursorLeft - WindowWidth, Console.CursorTop + 1);
                 Console.Write(BT.Left + InsideWindowSpace + BT.Right);
