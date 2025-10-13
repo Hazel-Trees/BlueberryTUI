@@ -1,5 +1,5 @@
-# Blueberry
-**Blueberry!** is a TUI library meant to help make TUI applications.
+# BlueberryTUI
+**Blueberry!TUI** is a TUI \(Text-based user interface\) library made to help make TUI applications.
 
 Current features:
 - Making a window
