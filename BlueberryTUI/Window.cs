@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 
 namespace BlueberryTUI
 {
     /// <summary>
-    /// A Window object that has a certain X and Y size. BorderTheme defaults to "LIGHT"
+    /// A Window class that has a certain size and position.
     /// </summary>
     public class Window
     {
@@ -11,52 +12,52 @@ namespace BlueberryTUI
         public int WindowHeight;
         public int WindowLeft;
         public int WindowTop;
-        private static Dictionary<string, (char TopLeft, char TopRight, char BottomLeft, char BottomRight, char Top, char Bottom, char Left, char Right)> BorderThemes = new()
+        private static Dictionary<string, (char TopLeft, char TopRight, char BottomLeft, char BottomRight, char Top, char Bottom, char Left, char Right)> OutlineStyles = new()
         { 
             {"LIGHT", ('\u250c','\u2510','\u2514','\u2518','\u2500','\u2500','\u2502','\u2502')},
             {"HEAVY", ('\u250f','\u2513','\u2517','\u251B','\u2501','\u2501','\u2503','\u2503')},
             {"HASHTAG", ('#','#','#','#','#','#','#','#')},
             {"ASCIIART", ('.','.','^','^','-','-','|','|')}
         };
-        private static List<string> ListOfStandardThemes = BorderThemes.Keys.ToList();
-        public string BorderTheme = "LIGHT";
+        private static readonly List<string> ListOfStandardOutlineStyles = [.. OutlineStyles.Keys];
+        public string OutlineStyle = "LIGHT";
+
+        private static Dictionary<string, (string Box, string OutlineBackground, string OutlineForeground)> WindowThemes = new()
+        {
+            {"RED", ("255;150;150","255;0;0","255;0;0")},
+            {"GREEN", ("150;255;150","0;255;0","150;255;0")},
+            {"BLUE", ("150;150;255","0;0;255","0;0;255")},
+            {"TEST", ("NONE","NONE","0;0;255")},
+            {"NONE", ("NONE","NONE","NONE")}
+        };
+        private static readonly List<string> ListOfStandardWindowThemes = [.. WindowThemes.Keys];
+        public string WindowTheme = "NONE";
 
         /// <summary>
-        /// Window constructor. Both dimensions must be at least of size 2. Default BorderTheme is "LIGHT".
+        /// Window constructor. Both dimensions must be at least of size 2. Default OutlineStyle is "LIGHT".
         /// </summary>
-        /// <param name="xsize"></param>
-        /// <param name="ysize"></param>
-        /// <param name="xposition"></param>
-        /// <param name="yposition"></param>
-        /// <param name="bordertheme"></param>
-        /// <param name="topleftcorner"></param>
-        /// <param name="toprightcorner"></param>
-        /// <param name="bottomleftcorner"></param>
-        /// <param name="bottomrightcorner"></param>
-        /// <param name="topline"></param>
-        /// <param name="bottomline"></param>
-        /// <param name="leftline"></param>
-        /// <param name="rightline"></param>
-        /// <exception cref="ArgumentException"></exception>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public Window(
-            int windowwidth,
-            int windowheight,
-            int windowleft,// Window drawing always starts at the top left
-            int windowtop,
-            string bordertheme = "LIGHT")
+        /// <param name="windowwidth"></param>
+        /// <param name="windowheight"></param>
+        /// <param name="windowleft"></param>
+        /// <param name="windowtop"></param>
+        /// <param name="outlinestyle"></param>
+        /// <param name="windowtheme"></param>
+        public Window(int windowwidth, int windowheight, int windowleft, int windowtop, string outlinestyle = "LIGHT", string windowtheme = "NONE")
         {
             if (windowwidth < 2) windowwidth = 2;
 
             if (windowheight < 2) windowheight = 2;
 
-            if (!BorderThemes.ContainsKey(bordertheme)) BorderTheme = "LIGHT";
+            if (!OutlineStyles.ContainsKey(outlinestyle)) OutlineStyle = "LIGHT";
+
+            if (!WindowThemes.ContainsKey(windowtheme)) WindowTheme = "NONE";
 
             WindowWidth = windowwidth;
             WindowHeight = windowheight;
             WindowLeft = windowleft;
             WindowTop = windowtop;
-            BorderTheme = bordertheme;
+            OutlineStyle = outlinestyle;
+            WindowTheme = windowtheme;
         }
 
         /// <summary>
@@ -68,118 +69,238 @@ namespace BlueberryTUI
             {
                 (int Left, int Top) TempCursorPosition = Console.GetCursorPosition();
 
-                (char TopLeft, char TopRight, char BottomLeft, char BottomRight, char Top, char Bottom, char Left, char Right) BT = BorderThemes[BorderTheme];
+                (char TopLeft, char TopRight, char BottomLeft, char BottomRight, char Top, char Bottom, char Left, char Right) = OutlineStyles[OutlineStyle];// Current OutlineStyle
+                (string Box, string OutlineBackground, string OutlineForeground) = WindowThemes[WindowTheme];// Current WindowTheme
 
-                string InsideWindowSpace = String.Concat(Enumerable.Repeat(' ', WindowWidth - 2));
-                string WindowTopLine = String.Concat(Enumerable.Repeat(BT.Top, WindowWidth - 2));
-                string WindowBottomLine = String.Concat(Enumerable.Repeat(BT.Bottom, WindowWidth - 2));
+                List<string> WindowToDraw = [];
 
-                Console.SetCursorPosition(WindowLeft < 0 ? 0 : WindowLeft + 1 > Console.WindowWidth ? Console.WindowWidth : WindowLeft, WindowTop < 0 ? 0 : WindowTop + WindowHeight > Console.WindowHeight ? Console.WindowHeight - WindowHeight < 0 ? WindowTop : Console.WindowHeight - WindowHeight : WindowTop);
-
-                if (WindowTop + WindowHeight > Console.WindowHeight && WindowHeight <= Console.WindowHeight)
+                string TopLineToWrite = Substring(TopLeft + String.Concat(Enumerable.Repeat(Top, WindowWidth - 2)) + TopRight, WindowLeft < 0 ? Math.Abs(WindowLeft) : 0, WindowLeft + WindowWidth > Console.WindowWidth ? Console.WindowWidth - WindowLeft - 1 : WindowWidth);
+                if (WindowTheme != "NONE")
                 {
-                    Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop + (WindowTop + WindowHeight > Console.WindowHeight ? WindowTop + WindowHeight - Console.WindowHeight : 0));
+                    if (OutlineForeground != "NONE")
+                    {
+                        TopLineToWrite = $"\u001b[38;2;{OutlineForeground}m{TopLineToWrite}\u001b[m";
+                    }
+                    if (OutlineBackground != "NONE")
+                    {
+                        TopLineToWrite = $"\u001b[48;2;{OutlineBackground}m{TopLineToWrite}\u001b[m";
+                    }
+                }
+                WindowToDraw.Add(TopLineToWrite);
+
+                for (int i = 0; i < WindowHeight - 2; i++)
+                {
+                    string LeftChar = Left.ToString();
+                    string RightChar = Right.ToString();
+                    string MiddleChars = String.Concat(Enumerable.Repeat(' ', WindowWidth - 2));
+                    if (WindowTheme != "NONE")
+                    {
+                        if (OutlineForeground != "NONE")
+                        {
+                            LeftChar = $"\u001b[38;2;{OutlineForeground}m{LeftChar}\u001b[m";
+                            RightChar = $"\u001b[38;2;{OutlineForeground}m{RightChar}\u001b[m";
+                        }
+                        if (OutlineBackground != "NONE")
+                        {
+                            LeftChar = $"\u001b[48;2;{OutlineBackground}m{LeftChar}\u001b[m";
+                            RightChar = $"\u001b[48;2;{OutlineBackground}m{RightChar}\u001b[m";
+                        }
+                        if (Box != "NONE")
+                        {
+                            MiddleChars = $"\u001b[48;2;{Box}m{MiddleChars}\u001b[m";
+                        }
+                    }
+                    WindowToDraw.Add(Substring(LeftChar + MiddleChars + RightChar, WindowLeft < 0 ? Math.Abs(WindowLeft) : 0, WindowLeft + WindowWidth > Console.WindowWidth ? Console.WindowWidth - WindowLeft - 1 : WindowWidth));
                 }
 
-                if (WindowTop >= 0)
+                string BottomLineToWrite = Substring(BottomLeft + String.Concat(Enumerable.Repeat(Bottom, WindowWidth - 2)) + BottomRight, WindowLeft < 0 ? Math.Abs(WindowLeft) : 0, WindowLeft + WindowWidth > Console.WindowWidth ? Console.WindowWidth - WindowLeft - 1 : WindowWidth);
+                if (WindowTheme != "NONE")
                 {
-                    //Top line of the Window
-                    Console.Write(WindowLineSubstring(BT.TopLeft + WindowTopLine + BT.TopRight));
+                    if (OutlineForeground != "NONE")
+                    {
+                        BottomLineToWrite = $"\u001b[38;2;{OutlineForeground}m{BottomLineToWrite}\u001b[m";
+                    }
+                    if (OutlineBackground != "NONE")
+                    {
+                        BottomLineToWrite = $"\u001b[48;2;{OutlineBackground}m{BottomLineToWrite}\u001b[m";
+                    }
+                }
+                WindowToDraw.Add(BottomLineToWrite);
+
+                Console.SetCursorPosition(WindowLeft < 0 ? 0 : WindowLeft > Console.WindowWidth ? Console.WindowWidth : WindowLeft, WindowTop < 0 ? 0 : WindowTop > Console.WindowHeight ? Console.WindowHeight : WindowTop);
+                Console.CursorVisible = false;
+
+                for (int i = WindowTop < 0 ? Math.Abs(WindowTop) : 0; i < (WindowTop + WindowToDraw.Count > Console.WindowHeight ? Console.WindowHeight - WindowTop : WindowToDraw.Count); i++)
+                {
+                    Console.Write(WindowToDraw[i]);
+                    Console.SetCursorPosition(WindowLeft < 0 ? 0 : WindowLeft > Console.WindowWidth ? Console.WindowWidth : WindowLeft, Console.CursorTop < Console.WindowHeight - 1 ? Console.CursorTop + 1: Console.CursorTop);
                 }
 
-                bool FirstLoop = true;
-                bool MoveLastLineDown = false;
-                //Middle of the Window
-                for (int i = 0 + (WindowTop < 0 ? Math.Abs(WindowTop + 1) : 0); i < WindowHeight - 2 - (WindowTop + WindowHeight > Console.WindowHeight ? WindowTop + WindowHeight - Console.WindowHeight - 1 : 0); i++)
-                {
-                    Console.SetCursorPosition(WindowLeft < 0 ? 0 : WindowLeft + 1 > Console.WindowWidth ? Console.WindowWidth : WindowLeft, Console.CursorTop + (FirstLoop && WindowTop < 0 ? 0 : 1));
-                    Console.Write(WindowLineSubstring(BT.Left + InsideWindowSpace + BT.Right));
-                    FirstLoop = false;
-                    MoveLastLineDown = true;
-                }
-
-                if (WindowTop + WindowHeight <= Console.WindowHeight)
-                {
-                    //Bottom line of the Window
-                    Console.SetCursorPosition(WindowLeft < 0 ? 0 : WindowLeft + 1 > Console.WindowWidth ? Console.WindowWidth : WindowLeft, Console.CursorTop + (MoveLastLineDown ? 1 : 0));
-                    Console.Write(WindowLineSubstring(BT.BottomLeft + WindowBottomLine + BT.BottomRight));
-                }
-
+                Console.CursorVisible = true;
                 Console.SetCursorPosition(TempCursorPosition.Left, TempCursorPosition.Top);
             }
         }
 
         /// <summary>
-        /// Create a new BorderTheme.
+        /// Create a new OutlineStyle.
         /// </summary>
-        /// <param name="borderthemename"></param>
-        /// <param name="borderchars"></param>
+        /// <param name="outlinestylename"></param>
+        /// <param name="outlinestylechars"></param>
         /// <exception cref="Exception"></exception>
-        public static void NewBorderTheme(string borderthemename, (char, char, char, char, char, char, char, char) borderchars)
+        public static void NewOutlineStyle(string OutlineStyleName, (char TopLeft, char TopRight, char BottomLeft, char BottomRight, char Top, char Bottom, char Left, char Right) OutlineStyleChars)
         {
-            if (!BorderThemes.ContainsKey(borderthemename))
+            if (!OutlineStyles.ContainsKey(OutlineStyleName))
             {
-                BorderThemes.Add(borderthemename, borderchars);
+                OutlineStyles.Add(OutlineStyleName, OutlineStyleChars);
             }
             else
             {
-                throw new Exception($"New BorderTheme name: {borderthemename}. A theme with this name already exists. Use a different name or use the UpdateBorderTheme() method to update a theme.");
+                throw new Exception($"New OutlineStyle name: {OutlineStyleName}. An OutlineStyle with this name already exists. Use a different name or use the UpdateOutlineStyle() method to update an OutlineStyle.");
             }
         }
 
         /// <summary>
-        /// Update an existing BorderTheme.
+        /// Update a custom OutlineStyle.
         /// </summary>
-        /// <param name="borderthemename"></param>
-        /// <param name="borderchars"></param>
+        /// <param name="outlinestylename"></param>
+        /// <param name="outlinestylechars"></param>
         /// <exception cref="Exception"></exception>
-        public static void UpdateBorderTheme(string borderthemename, (char, char, char, char, char, char, char, char) borderchars)
+        public static void UpdateOutlineStyle(string OutlineStyleName, (char TopLeft, char TopRight, char BottomLeft, char BottomRight, char Top, char Bottom, char Left, char Right) OutlineStyleChars)
         {
-            if (!ListOfStandardThemes.Contains(borderthemename) && BorderThemes.ContainsKey(borderthemename))
+            if (!ListOfStandardOutlineStyles.Contains(OutlineStyleName) && OutlineStyles.ContainsKey(OutlineStyleName))
             {
-                BorderThemes[borderthemename] = borderchars;
+                OutlineStyles[OutlineStyleName] = OutlineStyleChars;
             }
-            else if (ListOfStandardThemes.Contains(borderthemename))
+            else if (ListOfStandardOutlineStyles.Contains(OutlineStyleName))
             {
-                throw new Exception($"Attempted to update the following BorderTheme: {borderthemename}. Can not update standard themes");
+                throw new Exception($"Attempted to update the following OutlineStyle: {OutlineStyleName}. Can not update standard OutlineStyles");
             }
             else
             {
-                throw new Exception($"Attempted to update the following BorderTheme: {borderthemename}. This theme does not exist. Did you forget to make the theme?");
+                throw new Exception($"Attempted to update the following OutlineStyle: {OutlineStyleName}. This OutlineStyle does not exist. Did you forget to make the OutlineStyle?");
             }
         }
 
         /// <summary>
-        /// Delete and existing BorderTheme.
+        /// Delete a custom OutlineStyle.
         /// </summary>
-        /// <param name="borderthemename"></param>
+        /// <param name="outlinestylename"></param>
         /// <exception cref="Exception"></exception>
-        public static void DeleteBorderTheme(string borderthemename)
+        public static void DeleteOutlineStyle(string OutlineStyleName)
         {
-            if (!ListOfStandardThemes.Contains(borderthemename) && BorderThemes.ContainsKey(borderthemename))
+            if (!ListOfStandardOutlineStyles.Contains(OutlineStyleName) && OutlineStyles.ContainsKey(OutlineStyleName))
             {
-                BorderThemes.Remove(borderthemename);
+                OutlineStyles.Remove(OutlineStyleName);
             }
-            else if (ListOfStandardThemes.Contains(borderthemename))
+            else if (ListOfStandardOutlineStyles.Contains(OutlineStyleName))
             {
-                throw new Exception($"Attempted to delete the following BorderTheme: {borderthemename}. Can not delete standard themes");
+                throw new Exception($"Attempted to delete the following OutlineStyle: {OutlineStyleName}. Can not delete standard OutlineStyles");
             }
             else
             {
-                throw new Exception($"Attempted to delete the following BorderTheme: {borderthemename}. This theme does not exist.");
+                throw new Exception($"Attempted to delete the following OutlineStyle: {OutlineStyleName}. This OutlineStyle does not exist.");
             }
         }
 
         /// <summary>
-        /// Makes a substring of the Window line that will be drawn so the application does not attempt to draw lines outside of the terminal dimensions.
+        /// Create a new WindowTheme.
         /// </summary>
-        /// <param name="LineToSubstring"></param>
+        /// <param name="WindowThemeName"></param>
+        /// <param name="WindowThemeColors"></param>
+        /// <exception cref="Exception"></exception>
+        public static void NewWindowTheme(string WindowThemeName, (string Box, string OutlineBackground, string OutlineForeground) WindowThemeColors)
+        {
+            if (WindowThemes.ContainsKey(WindowThemeName))
+            {
+                WindowThemes.Add(WindowThemeName, WindowThemeColors);
+            }
+            else
+            {
+                throw new Exception($"New WindowTheme name: {WindowThemeName}. A WindowTheme with this name already exists. Use a different name or use the UpdateWindowTheme() method to update a WindowTheme.");
+            }
+        }
+
+        /// <summary>
+        /// Update a custom WindowTheme.
+        /// </summary>
+        /// <param name="WindowThemeName"></param>
+        /// <param name="WindowThemeColors"></param>
+        /// <exception cref="Exception"></exception>
+        public static void UpdateWindowTheme(string WindowThemeName, (string Box, string OutlineBackground, string OutlineForeground) WindowThemeColors)
+        {
+            if (!ListOfStandardWindowThemes.Contains(WindowThemeName) && WindowThemes.ContainsKey(WindowThemeName))
+            {
+                WindowThemes[WindowThemeName] = WindowThemeColors;
+            }
+            else if (ListOfStandardWindowThemes.Contains(WindowThemeName))
+            {
+                throw new Exception($"Attempted to update the following WindowTheme: {WindowThemeName}. Can not update standard WindowThemes.");
+            }
+            else
+            {
+                throw new Exception($"Attempted to update the following WindowTheme: {WindowThemeName}. This WindowTheme does not exist. Did you forget to make the WindowTheme?");
+            }
+        }
+
+        /// <summary>
+        /// Delete a custom WindowTheme.
+        /// </summary>
+        /// <param name="WindowThemeName"></param>
+        /// <exception cref="Exception"></exception>
+        public static void DeleteWindowTheme(string WindowThemeName)
+        {
+            if (!ListOfStandardWindowThemes.Contains(WindowThemeName) && WindowThemes.ContainsKey(WindowThemeName))
+            {
+                WindowThemes.Remove(WindowThemeName);
+            }
+            else if (ListOfStandardWindowThemes.Contains(WindowThemeName))
+            {
+                throw new Exception($"Attempted to delete the following WindowTheme: {WindowThemeName}. Can not delete standard WindowThemes.");
+            }
+            else
+            {
+                throw new Exception($"Attempted to delete the following WindowTheme: {WindowThemeName}. This WindowTheme does not exist.");
+            }
+        }
+
+        /// <summary>
+        /// Returns a substring from the Input string. This method compensates for ANSI escape codes (currently only tested with 24 bit color escape codes) being present.
+        /// </summary>
+        /// <param name="Input"></param>
+        /// <param name="Start"></param>
+        /// <param name="End"></param>
         /// <returns></returns>
-        private string WindowLineSubstring(string LineToSubstring)
+        private string Substring(string Input, int Start, int End)
         {
-            string SubstringFromLeft = LineToSubstring[(WindowLeft < 0 ? Math.Abs(WindowLeft) : 0)..];
-            int Length = SubstringFromLeft.Length;
-            return SubstringFromLeft[..(WindowLeft < 0 && SubstringFromLeft.Length > Console.WindowWidth ? Console.WindowWidth : WindowLeft < 0 ? SubstringFromLeft.Length : SubstringFromLeft.Length + WindowLeft > Console.WindowWidth ? Console.WindowWidth - WindowLeft : SubstringFromLeft.Length)];
+            string Output = "";
+            bool IgnoreChars = false;
+            int CurrentChar = 0;
+            for (int i = 0; i < Input.Length; i++)
+            {
+                if (Input[i] == '\u001b')
+                {
+                    IgnoreChars = true;
+                }
+
+                if (!IgnoreChars)
+                {
+                    if (CurrentChar >= Start && CurrentChar <= End)
+                    {
+                        Output += Input[i];
+                    }
+                    CurrentChar++;
+                }
+                else
+                {
+                    Output += Input[i];
+                }
+
+                if (IgnoreChars && Input[i] == 'm')
+                {
+                    IgnoreChars = false;
+                }
+            }
+            return Regex.Replace(Output, @"(\u001b\[[0-9;]+m)+\u001b\[m", "");
         }
     }
 }
