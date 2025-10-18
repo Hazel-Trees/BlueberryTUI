@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace BlueberryTUI
 {
     /// <summary>
-    /// A Window class that has a certain size and position.
+    /// Class for creating a Window object that has a certain size and position.
     /// </summary>
     public class Window
     {
@@ -34,7 +34,7 @@ namespace BlueberryTUI
         public string WindowTheme = "NONE";
 
         /// <summary>
-        /// Window constructor. Both dimensions must be at least of size 2. Default OutlineStyle is "LIGHT".
+        /// Window constructor.
         /// </summary>
         /// <param name="windowwidth"></param>
         /// <param name="windowheight"></param>
@@ -61,7 +61,7 @@ namespace BlueberryTUI
         }
 
         /// <summary>
-        /// Draws the Window in the terminal.
+        /// Draws the window in the terminal.
         /// </summary>
         public void DrawWindow()
         {
