@@ -8,7 +8,7 @@ namespace BlueberryTUI
     /// </summary>
     public class Window
     {
-        public int WindowWidth;
+        public int WindowWidth;//Test comment
         public int WindowHeight;
         public int WindowLeft;
         public int WindowTop;
